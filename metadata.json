@@ -1,0 +1,6 @@
+{
+  "name": "KAVO HOSTING ENGINE V5",
+  "description": "Production-grade 24/7 developer hosting engine with Cloudflare Turnstile security gate, Google authentication, ZIP deployments, domain-aware routing, atomic versioning, and SEO engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

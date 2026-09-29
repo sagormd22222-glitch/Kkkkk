@@ -1,0 +1,172 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile record for authenticated Google user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "User-isolated hosting project with slug, runtime categorization, and deployment status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerUid": { "type": "string" },
+        "name": { "type": "string", "maxLength": 80 },
+        "slug": { "type": "string", "maxLength": 80, "pattern": "^[a-z0-9\\-]+$" },
+        "domain": { "type": "string" },
+        "liveUrl": { "type": "string" },
+        "visibility": { "type": "string", "enum": ["public", "private"] },
+        "deploymentStatus": { "type": "string", "enum": ["DRAFT", "VALIDATING", "PROCESSING", "READY", "DEPLOYING", "LIVE", "FAILED", "UPDATING"] },
+        "runtimeCategory": { "type": "string", "enum": ["STATIC_WEB", "PHP_RUNTIME", "UNSUPPORTED_RUNTIME"] },
+        "detectedEntry": { "type": "string" },
+        "activeVersion": { "type": "string" },
+        "created": { "type": "number" },
+        "updated": { "type": "number" }
+      },
+      "required": ["id", "ownerUid", "name", "slug", "deploymentStatus"]
+    },
+    "ProjectFile": {
+      "title": "ProjectFile",
+      "description": "Metadata for a file stored in a project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 255 },
+        "fileName": { "type": "string", "maxLength": 255 },
+        "ext": { "type": "string" },
+        "lang": { "type": "string" },
+        "renderable": { "type": "boolean" },
+        "runtimeSupport": { "type": "string", "enum": ["WEB_RENDERABLE", "SOURCE_MANAGED", "RUNTIME_UNSUPPORTED"] },
+        "size": { "type": "number" },
+        "folder": { "type": "string" },
+        "created": { "type": "number" },
+        "updated": { "type": "number" }
+      },
+      "required": ["id", "name", "fileName", "ext"]
+    },
+    "ProjectSlug": {
+      "title": "ProjectSlug",
+      "description": "Global unique slug registry for collision prevention",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9\\-]+$" },
+        "ownerUid": { "type": "string" },
+        "projectId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["slug", "ownerUid", "projectId"]
+    },
+    "ApiToken": {
+      "title": "ApiToken",
+      "description": "Developer API credential metadata (secure token hash, prefix, status)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "tokenHash": { "type": "string" },
+        "tokenPrefix": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "lastUsedAt": { "type": "number" },
+        "revokedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "tokenHash", "tokenPrefix", "name", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Audit log event for security and deployment tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "resourceType": { "type": "string" },
+        "resourceId": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "userId", "action", "resourceType", "timestamp"]
+    },
+    "PythonBot": {
+      "title": "PythonBot",
+      "description": "Persistent 24/7 background Python bot worker process",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 200 },
+        "entryFile": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["STOPPED", "STARTING", "RUNNING", "FAILED", "RESTARTING"] },
+        "restartPolicy": { "type": "string", "enum": ["always", "on-failure", "never"] },
+        "autoRestart": { "type": "boolean" },
+        "restartCount": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "name", "entryFile", "status"]
+    },
+    "UploadSession": {
+      "title": "UploadSession",
+      "description": "Resumable chunked upload session for large projects and archives",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileSize": { "type": "number" },
+        "totalChunks": { "type": "number" },
+        "chunkSize": { "type": "number" },
+        "targetType": { "type": "string", "enum": ["project", "bot"] },
+        "status": { "type": "string", "enum": ["INITIALIZED", "UPLOADING", "ASSEMBLING", "VALIDATING", "COMPLETED", "FAILED", "ABANDONED"] },
+        "progressPercent": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "expiresAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "fileName", "fileSize", "totalChunks", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user identity document"
+    },
+    "/users/{userId}/tokens/{tokenId}": {
+      "schema": "ApiToken",
+      "description": "Developer API key metadata"
+    },
+    "/users/{userId}/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "User audit log entries"
+    },
+    "/users/{userId}/bots/{botId}": {
+      "schema": "PythonBot",
+      "description": "Persistent Python background worker records"
+    },
+    "/users/{userId}/upload_sessions/{sessionId}": {
+      "schema": "UploadSession",
+      "description": "Resumable upload session metadata"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Tenant-isolated project documents"
+    },
+    "/users/{userId}/projects/{projectId}/files/{fileId}": {
+      "schema": "ProjectFile",
+      "description": "Files belonging to a specific user project"
+    },
+    "/slugs/{slug}": {
+      "schema": "ProjectSlug",
+      "description": "Public slug reservation and route lookup registry"
+    }
+  }
+}

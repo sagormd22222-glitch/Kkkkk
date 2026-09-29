@@ -1,0 +1,26 @@
+# Systemd unit configuration for 24/7 continuous KAVO Hosting API service
+# Install to: /etc/systemd/system/kavo-api.service
+# Enable: sudo systemctl enable --now kavo-api
+
+[Unit]
+Description=KAVO 24/7 Multi-Tenant Hosting Engine & Developer API
+After=network.target
+
+[Service]
+Type=simple
+User=node
+WorkingDirectory=/var/www/kavo-app
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=3s
+LimitNOFILE=65536
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Sandbox security controls
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

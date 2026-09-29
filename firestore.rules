@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidSlug(slug) {
+      return slug is string && slug.size() >= 2 && slug.size() <= 80 && slug.matches('^[a-z0-9\\-]+$');
+    }
+
+    // User profile document
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Deny enumeration of users
+      allow create, update: if isOwner(userId) 
+        && request.resource.data.uid == userId
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 255;
+      allow delete: if false;
+
+      // Developer API Tokens subcollection (strictly isolated to owner)
+      match /tokens/{tokenId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(tokenId)
+          && request.resource.data.userId == userId
+          && request.resource.data.tokenHash is string;
+        allow update: if isOwner(userId)
+          && isValidId(tokenId)
+          && request.resource.data.userId == userId;
+        allow delete: if isOwner(userId) && isValidId(tokenId);
+      }
+
+      // Audit Logs subcollection
+      match /audit_logs/{logId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(logId);
+        allow update, delete: if false; // Immutable audit trail
+      }
+
+      // Python Background Bots subcollection (strictly isolated to owner)
+      match /bots/{botId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isValidId(botId)
+          && request.resource.data.userId == userId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 80;
+        allow delete: if isOwner(userId) && isValidId(botId);
+      }
+
+      // Resumable Chunked Upload Sessions subcollection
+      match /upload_sessions/{sessionId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && isValidId(sessionId)
+          && request.resource.data.userId == userId;
+        allow delete: if isOwner(userId) && isValidId(sessionId);
+      }
+
+      // Project subcollection: strictly scoped to the owner UID
+      match /projects/{projectId} {
+        allow get: if isOwner(userId) && isValidId(projectId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(projectId)
+          && request.resource.data.ownerUid == userId
+          && request.resource.data.id == projectId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 80
+          && isValidSlug(request.resource.data.slug);
+        allow update: if isOwner(userId)
+          && isValidId(projectId)
+          && request.resource.data.ownerUid == userId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 80
+          && isValidSlug(request.resource.data.slug);
+        allow delete: if isOwner(userId) && isValidId(projectId);
+
+        // Project files subcollection
+        match /files/{fileId} {
+          allow get: if isOwner(userId) && isValidId(fileId);
+          allow list: if isOwner(userId);
+          allow create, update: if isOwner(userId)
+            && isValidId(fileId)
+            && request.resource.data.name is string
+            && request.resource.data.name.size() <= 255;
+          allow delete: if isOwner(userId) && isValidId(fileId);
+        }
+      }
+    }
+
+    // Public /slugs registry for route resolution & collision reservation
+    match /slugs/{slug} {
+      allow get: if isValidSlug(slug);
+      allow list: if false; // Prevent scraping all slugs
+      allow create: if isSignedIn()
+        && isValidSlug(slug)
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.slug == slug;
+      allow update: if isSignedIn()
+        && isValidSlug(slug)
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if isSignedIn()
+        && isValidSlug(slug)
+        && resource.data.ownerUid == request.auth.uid;
+    }
+  }
+}
